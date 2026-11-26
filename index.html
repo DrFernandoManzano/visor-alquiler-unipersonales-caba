@@ -423,6 +423,30 @@ h2 {
 
 }
 
+
+/* Adaptación móvil: controles fuera de la cartografía */
+@media (max-width:850px) {
+  h1 {font-size:20px; margin:12px 8px;}
+  .dashboard {padding:0 7px;}
+  .map-wrap {display:flex; flex-direction:column; height:auto; min-height:0; overflow:visible; gap:8px; padding:6px;}
+  .selector {position:static; order:0; width:100%; max-width:none; padding:10px; z-index:auto;}
+  #map {order:1; height:clamp(300px, 100vw, 440px); flex:none; border-radius:8px;}
+  .legend {position:static; order:2; width:100%; max-width:none; padding:8px; z-index:auto;}
+  .control-title {font-size:11px; margin-bottom:5px;}
+  .mode-description {font-size:11px; padding:6px; margin-bottom:5px;}
+  .control-divider {margin:6px 0;}
+  .selector label {font-size:12px; margin:6px 0; align-items:center; min-height:24px;}
+  .mode-btn {min-height:36px;}
+  .legend-scale {height:12px;}
+  .legend-note {font-size:10px; margin-top:4px;}
+  .etiqueta-comuna {font-size:9px !important; line-height:11px; padding:0;}
+  .side h2,.explain h2 {font-size:21px;}
+  .explain p {font-size:14px;}
+  .info-sexo {min-width:150px; font-size:12px;}
+  #detalle-movil {order:3; background:white; border-radius:8px; padding:10px; color:#071c42;}
+  #detalle-movil button {float:right; border:0; background:#eee; padding:6px 10px; border-radius:5px;}
+}
+
 </style>
 
 </head>
@@ -445,6 +469,7 @@ Hogares unipersonales inquilinos - CABA 2026
     <div class="map-wrap">
 
       <div id="map"></div>
+      <div id="detalle-movil" hidden></div>
 
       <div class="selector">
 
@@ -826,8 +851,15 @@ let layer = null;
 // MAPA LEAFLET
 // ==========================================================
 
+const movil = window.matchMedia('(max-width:850px)').matches;
 const map = L.map('map', {
-  zoomControl:true,
+  zoomSnap:movil ? 0.1 : 1,
+  zoomControl:!movil,
+  dragging:!movil,
+  touchZoom:!movil,
+  doubleClickZoom:!movil,
+  boxZoom:!movil,
+  keyboard:!movil,
   attributionControl:false,
   scrollWheelZoom:false
 });
@@ -1057,6 +1089,7 @@ function actualizarBotones() {
 // ==========================================================
 
 function render() {
+  if (movil) document.getElementById("detalle-movil").hidden = true;
 
   const cfg = indicadores[grupoActual];
 
@@ -1124,7 +1157,7 @@ function render() {
       // ----------------------------------------------------
 
       l.bindTooltip(
-        '<b>Comuna '+p.comuna+'</b>',
+        '<b>'+(movil ? '' : 'Comuna ')+p.comuna+'</b>',
         {
           permanent:true,
           direction:'center',
@@ -1166,9 +1199,18 @@ function render() {
         '</div>';
 
 
-      l.bindPopup(informacion,{
+      if (movil) {
+        l.on("click",()=>{
+          const detalle = document.getElementById("detalle-movil");
+          detalle.innerHTML = '<button type="button" aria-label="Cerrar detalle">×</button>'+informacion;
+          detalle.hidden = false;
+          detalle.querySelector("button").onclick = ()=>{detalle.hidden=true;};
+        });
+      } else l.bindPopup(informacion,{
         autoPan:false,
-        closeButton:false,
+        autoPanPadding:[12,12],
+        maxWidth:movil ? 180 : 300,
+        closeButton:movil,
         offset:[0,-12]
       });
 
@@ -1177,7 +1219,7 @@ function render() {
       // RESALTAR COMUNA
       // ----------------------------------------------------
 
-      l.on('mouseover',()=>{
+      if (!movil) l.on('mouseover',()=>{
 
         l.setStyle({
           weight:3,
@@ -1190,7 +1232,7 @@ function render() {
       });
 
 
-      l.on('mouseout',()=>{
+      if (!movil) l.on('mouseout',()=>{
 
         l.closePopup();
 
@@ -1212,7 +1254,7 @@ function render() {
     map.fitBounds(
       layer.getBounds(),
       {
-        padding:[8,8],
+        padding:movil ? [18,18] : [8,8],
         maxZoom:12
       }
     );
